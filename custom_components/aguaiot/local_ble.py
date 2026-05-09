@@ -30,6 +30,7 @@ DEFAULT_CHAR_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 DEFAULT_NAME_PREFIX = "T009_"
 BLE_DISCOVERY_RETRY_INTERVAL = 1
 BLE_DISCOVERY_MAX_WAIT = 30
+BLE_DEFAULT_PAYLOAD_SIZE = 20
 
 
 def _is_ble_authorization_error(err: Exception) -> bool:
@@ -780,10 +781,12 @@ class _BleMicronovaSession:
             self._characteristic_uuid, header, response=True
         )
 
-        mtu = getattr(self._client, "mtu_size", 23) or 23
-        chunk_size = max(20, mtu - 3)
-        for index in range(0, len(body), chunk_size):
-            chunk = body[index : index + chunk_size]
+        # Use the ATT payload size guaranteed by the default BLE MTU.
+        # Reading BleakClient.mtu_size on BlueZ emits a warning unless BlueZ-specific
+        # MTU acquisition was performed, and the warning can hide the real error in
+        # Home Assistant logs. The Micronova tunnel works with safe 20-byte chunks.
+        for index in range(0, len(body), BLE_DEFAULT_PAYLOAD_SIZE):
+            chunk = body[index : index + BLE_DEFAULT_PAYLOAD_SIZE]
             await self._client.write_gatt_char(
                 self._characteristic_uuid,
                 chunk,
