@@ -31,6 +31,53 @@ DEFAULT_NAME_PREFIX = "T009_"
 BLE_DISCOVERY_RETRY_INTERVAL = 1
 BLE_DISCOVERY_MAX_WAIT = 30
 BLE_DEFAULT_PAYLOAD_SIZE = 20
+# BlueZ may not release the notification slot instantly between peripheral sessions.
+# With two (or more) stoves, keep a generous gap so the second device is not always
+# forced through a StartNotify retry (see BlueZ NotPermitted / "Notify acquired").
+BLE_INTER_DEVICE_UPDATE_DELAY_SINGLE = 1.5
+BLE_INTER_DEVICE_UPDATE_DELAY_MULTI = 3.0
+BLE_NOTIFY_ACQUIRED_RETRY_DELAY = 3.0
+# BlueZ may drop the peripheral from its connect cache when scanning pauses; bleak_retry
+# then fails even though HA briefly saw the device. Extra rounds re-run HA discovery.
+BLE_ESTABLISH_MAX_ATTEMPTS = 7
+BLE_STALE_CONNECT_RESCAN_ROUNDS = 3
+BLE_STALE_CONNECT_RETRY_PAUSE = 2.5
+
+
+def _is_ble_connect_stale_cache_error(err: Exception) -> bool:
+    """True when the stack lost the device between HA discovery and connect (BlueZ cache)."""
+    msg = str(err).lower()
+    return (
+        ("not found" in msg and "address" in msg)
+        or "removed from bluez" in msg
+        or "disappeared" in msg
+        or "scanning stopped" in msg
+    )
+
+
+def _is_bluez_notify_acquired_error(err: Exception) -> bool:
+    """Return True when BlueZ refuses StartNotify because the notify path is still acquired."""
+    lowered = str(err).lower()
+    return "notify acquired" in lowered
+
+
+async def _start_notify_micronova(
+    client: BleakClient, characteristic_uuid: str, callback: Any
+) -> None:
+    """Subscribe to GATT notifications using StartNotify when Bleak supports it.
+
+    Bleak 2.x defaults to AcquireNotify when the characteristic reports
+    NotifyAcquired; older BlueZ stacks do not implement that D-Bus method and
+    raise UnknownObject. Forcing StartNotify keeps compatibility with those hosts.
+    """
+    try:
+        await client.start_notify(
+            characteristic_uuid,
+            callback,
+            bluez={"use_start_notify": True},
+        )
+    except TypeError:
+        await client.start_notify(characteristic_uuid, callback)
 
 
 def _is_ble_authorization_error(err: Exception) -> bool:
@@ -156,7 +203,14 @@ class LocalBleAguaIOT:
 
     async def update(self) -> None:
         """Refresh all devices using BLE."""
-        for dev in self.devices:
+        inter_device_delay = (
+            BLE_INTER_DEVICE_UPDATE_DELAY_MULTI
+            if len(self.devices) > 1
+            else BLE_INTER_DEVICE_UPDATE_DELAY_SINGLE
+        )
+        for index, dev in enumerate(self.devices):
+            if index:
+                await asyncio.sleep(inter_device_delay)
             await dev.update()
 
     async def validate_local_connection(self) -> dict[str, Any]:
@@ -586,21 +640,88 @@ class _BleMicronovaSession:
         self._notif_len: int | None = None
         self._resolved_target: Any = None
 
+    async def _establish_connection_with_rediscover(
+        self, client_cls: type[BleakClient], ble_device: Any
+    ) -> BleakClient:
+        """Connect, re-resolving the BLEDevice if BlueZ no longer has the address."""
+        last_err: BleakError | None = None
+        for attempt in range(BLE_STALE_CONNECT_RESCAN_ROUNDS):
+            if attempt:
+                await asyncio.sleep(BLE_STALE_CONNECT_RETRY_PAUSE)
+                ble_device = await self._transport._async_get_ble_device(self._device)
+                self._resolved_target = ble_device
+            try:
+                return await establish_connection(
+                    client_cls,
+                    ble_device,
+                    self._device.name,
+                    max_attempts=BLE_ESTABLISH_MAX_ATTEMPTS,
+                )
+            except BleakError as err:
+                last_err = err
+                if not _is_ble_connect_stale_cache_error(err):
+                    raise
+                if attempt == BLE_STALE_CONNECT_RESCAN_ROUNDS - 1:
+                    raise
+                _LOGGER.debug(
+                    "BLE connect cache miss for '%s' (%s); re-scanning.",
+                    self._device.name,
+                    err,
+                )
+        assert last_err is not None  # pragma: no cover
+        raise last_err
+
     async def __aenter__(self) -> "_BleMicronovaSession":
         await self._transport._command_lock.acquire()
 
         try:
             ble_device = await self._transport._async_get_ble_device(self._device)
             self._resolved_target = ble_device
-            self._client = await establish_connection(
-                BleakClientWithServiceCache,
-                ble_device,
-                self._device.name,
-                max_attempts=3,
+            # With more than one stove, GATT service caching has been observed to leave
+            # BlueZ in a state where StartNotify returns NotPermitted ("Notify acquired")
+            # on the next peripheral. A plain client avoids that at the cost of a full
+            # service discovery each session.
+            client_cls = (
+                BleakClient
+                if len(self._transport.devices) > 1
+                else BleakClientWithServiceCache
+            )
+            self._client = await self._establish_connection_with_rediscover(
+                client_cls, ble_device
             )
             characteristic_uuid = self._resolve_characteristic_uuid()
             self._characteristic_uuid = characteristic_uuid
-            await self._client.start_notify(characteristic_uuid, self._handle_notify)
+            try:
+                await _start_notify_micronova(
+                    self._client, characteristic_uuid, self._handle_notify
+                )
+            except BleakError as err:
+                if not _is_bluez_notify_acquired_error(err):
+                    raise
+                _LOGGER.debug(
+                    "BlueZ notify not available yet for '%s' (%s); "
+                    "disconnecting and retrying once after %ss (fresh client, no GATT cache).",
+                    self._device.name,
+                    err,
+                    BLE_NOTIFY_ACQUIRED_RETRY_DELAY,
+                )
+                try:
+                    await self._client.disconnect()
+                finally:
+                    self._client = None
+                await asyncio.sleep(BLE_NOTIFY_ACQUIRED_RETRY_DELAY)
+                # Plain BleakClient avoids a stale service/notify view in BlueZ that
+                # can trigger repeated NotPermitted after the previous peripheral session.
+                ble_device = await self._transport._async_get_ble_device(self._device)
+                self._resolved_target = ble_device
+                self._client = await self._establish_connection_with_rediscover(
+                    BleakClient, ble_device
+                )
+                characteristic_uuid = self._resolve_characteristic_uuid()
+                self._characteristic_uuid = characteristic_uuid
+                await _start_notify_micronova(
+                    self._client, characteristic_uuid, self._handle_notify
+                )
         except AguaIOTConnectionError:
             await self._cleanup_failed_enter()
             raise
