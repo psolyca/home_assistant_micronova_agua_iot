@@ -638,7 +638,7 @@ CLIMATE_CANALIZATIONS = (
     AguaIOTCanalizationEntityDescription(
         name="Vent {id}",
         key=r"vent_(?P<id>(front|rear))_set",
-        key_enable="vent_{id}2_enable",
+        key_enable="vent_{id}_enable",
         key2_enable="vent_{id}2_enable",
         key_temp_set="temp_{id}_set",
         key_temp_get="temp_{id}_get",
