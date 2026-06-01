@@ -157,6 +157,10 @@ ENDPOINTS = {
         CONF_CUSTOMER_CODE: "402762",
         CONF_API_URL: "https://elfire.agua-iot.com",
     },
+    "EOSS Wifi": {
+        CONF_CUSTOMER_CODE: "326495",
+        CONF_API_URL: "https://solartecnik.agua-iot.com",
+    },
     "EvaCalòr - PuntoFuoco": {
         CONF_CUSTOMER_CODE: "635987",
         CONF_API_URL: "https://evastampaggi.agua-iot.com",
