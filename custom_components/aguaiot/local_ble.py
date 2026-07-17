@@ -27,7 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 DEFAULT_CHAR_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-DEFAULT_NAME_PREFIX = "T009_"
+LOCAL_NAME_PREFIXES = ("T009_", "NAVEL_")
 BLE_DISCOVERY_RETRY_INTERVAL = 1
 BLE_DISCOVERY_MAX_WAIT = 30
 BLE_DEFAULT_PAYLOAD_SIZE = 20
@@ -358,7 +358,7 @@ class LocalBleAguaIOT:
             "module_address": session.connected_address
             or self._device_ble_address(session._device),
             "module_name": session.connected_name
-            or self._expected_local_name(session._device),
+            or next(iter(self._expected_local_name(session._device) or []), None),
             "buffer_ids": buffer_ids,
         }
 
@@ -466,13 +466,13 @@ class LocalBleAguaIOT:
             )
         return str(value)
 
-    def _expected_local_name(self, device: Device) -> str | None:
-        """Return the expected T009 local name for the stove."""
+    def _expected_local_name(self, device: Device) -> list[str] | None:
+        """Return the expected local names for the stove."""
         identity = _normalize_identity_id(device.ble_mac)
         if not identity or len(identity) < 6:
             return None
 
-        return f"{DEFAULT_NAME_PREFIX}{identity[-6:]}"
+        return [f"{prefix}{identity[-6:]}" for prefix in LOCAL_NAME_PREFIXES]
 
     def _candidate_ble_addresses(self, device: Device) -> list[str]:
         """Return likely BLE addresses for the T009 module.
@@ -513,7 +513,7 @@ class LocalBleAguaIOT:
         """Find the target BLEDevice in Home Assistant's shared scanner."""
         address = self._device_ble_address(device)
         candidate_addresses = self._candidate_ble_addresses(device)
-        expected_name = self._expected_local_name(device)
+        expected_names = self._expected_local_name(device)
         scanner_count = bluetooth.async_scanner_count(self.hass, connectable=True)
 
         if scanner_count == 0:
@@ -562,18 +562,18 @@ class LocalBleAguaIOT:
                     )
                     return service_info.device, ""
 
-                if expected_name and service_name == expected_name:
+                if expected_names and service_name in expected_names:
                     _LOGGER.debug(
                         "Matched BLE service info for '%s' by exact name %s (address=%s, connectable=%s)",
                         device.name,
-                        expected_name,
+                        service_name,
                         service_address,
                         connectable,
                     )
                     return service_info.device, ""
 
                 if fallback_prefix_device is None and service_name.startswith(
-                    DEFAULT_NAME_PREFIX
+                    LOCAL_NAME_PREFIXES
                 ):
                     fallback_prefix_device = service_info.device
 
@@ -590,7 +590,7 @@ class LocalBleAguaIOT:
             None,
             f"Micronova BLE device for '{device.name}' was not discovered by Home "
             f"Assistant yet (address={address}, candidates={candidate_addresses}, "
-            f"expected_name={expected_name})",
+            f"expected_names={expected_names})",
         )
 
     async def _async_get_ble_device(self, device: Device) -> Any:
