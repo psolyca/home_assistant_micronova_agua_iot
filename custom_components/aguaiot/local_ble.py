@@ -756,6 +756,8 @@ class _BleMicronovaSession:
             try:
                 if self._client:
                     await self._client.disconnect()
+            except EOFError:
+                pass  # BlueZ already closed the connection
             finally:
                 self._transport._command_lock.release()
 
