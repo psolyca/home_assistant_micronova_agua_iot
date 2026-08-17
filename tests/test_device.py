@@ -1,7 +1,8 @@
 """Test the Device class using fixture data as simulated API responses."""
 
 import pytest
-from tests.helpers import build_device_from_fixture, AguaIOTError
+
+from tests.helpers import AguaIOTError, build_device_from_fixture
 
 
 class TestGetRegister:

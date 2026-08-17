@@ -1,16 +1,19 @@
 """Agua IOT constants."""
 
-from homeassistant.const import (
-    Platform,
-    UnitOfTemperature,
-    UnitOfPressure,
-    UnitOfTime,
-    REVOLUTIONS_PER_MINUTE,
-)
+from dataclasses import dataclass
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntityDescription,
 )
+from homeassistant.components.climate import (
+    ClimateEntityDescription,
+)
+from homeassistant.components.number import (
+    NumberDeviceClass,
+    NumberEntityDescription,
+)
+from homeassistant.components.select import SelectEntityDescription
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntityDescription,
@@ -20,15 +23,13 @@ from homeassistant.components.switch import (
     SwitchDeviceClass,
     SwitchEntityDescription,
 )
-from homeassistant.components.number import (
-    NumberDeviceClass,
-    NumberEntityDescription,
+from homeassistant.const import (
+    REVOLUTIONS_PER_MINUTE,
+    Platform,
+    UnitOfPressure,
+    UnitOfTemperature,
+    UnitOfTime,
 )
-from homeassistant.components.climate import (
-    ClimateEntityDescription,
-)
-from homeassistant.components.select import SelectEntityDescription
-from dataclasses import dataclass
 
 
 @dataclass

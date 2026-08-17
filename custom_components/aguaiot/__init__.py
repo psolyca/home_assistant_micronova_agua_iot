@@ -1,12 +1,12 @@
 """Support for Micronova Agua IOT heating devices."""
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 
-from .coordinator import AguaIOTDataUpdateCoordinator
 from .const import DOMAIN, PLATFORMS
+from .coordinator import AguaIOTDataUpdateCoordinator
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

@@ -6,10 +6,10 @@ import logging
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.httpx_client import get_async_client
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .aguaiot import (
     AguaIOTConnectionError,
@@ -18,29 +18,28 @@ from .aguaiot import (
     AguaIOTUpdateError,
     aguaiot,
 )
-from .local_ble import DEFAULT_CHAR_UUID, DEFAULT_SERVICE_UUID, LocalBleAguaIOT
-
 from .const import (
+    CONF_AIR_TEMP_FIX,
     CONF_API_URL,
     CONF_BLE_BOOTSTRAP_DEVICES,
     CONF_BLE_CHAR_UUID,
     CONF_BLE_SERVICE_UUID,
+    CONF_BRAND,
+    CONF_BRAND_ID,
+    CONF_BUFFER_READ_TIMEOUT,
     CONF_CONNECTION_MODE,
     CONF_CUSTOMER_CODE,
-    CONF_LOGIN_API_URL,
-    CONF_UUID,
-    CONF_BRAND_ID,
-    CONF_BRAND,
+    CONF_HTTP_TIMEOUT,
     CONF_LANGUAGE,
-    CONF_AIR_TEMP_FIX,
+    CONF_LOGIN_API_URL,
     CONF_READING_ERROR_FIX,
     CONF_UPDATE_INTERVAL,
-    CONF_HTTP_TIMEOUT,
-    CONF_BUFFER_READ_TIMEOUT,
+    CONF_UUID,
     CONNECTION_MODE_BLUETOOTH,
     CONNECTION_MODE_CLOUD,
     DOMAIN,
 )
+from .local_ble import DEFAULT_CHAR_UUID, DEFAULT_SERVICE_UUID, LocalBleAguaIOT
 
 _LOGGER = logging.getLogger(__name__)
 

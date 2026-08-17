@@ -14,6 +14,7 @@ from bleak import BleakClient, BleakError
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
+from typing_extensions import Self
 
 from .aguaiot import (
     AguaIOTConnectionError,
@@ -343,7 +344,7 @@ class LocalBleAguaIOT:
         )
 
     async def _validate_local_connection_session(
-        self, session: "_BleMicronovaSession"
+        self, session: _BleMicronovaSession
     ) -> dict[str, Any]:
         """Validate the BLE tunnel through an authenticated session."""
         buffer_ids = await session.get_buffer_ids()
@@ -363,7 +364,7 @@ class LocalBleAguaIOT:
         }
 
     async def _fetch_device_information_session(
-        self, session: "_BleMicronovaSession"
+        self, session: _BleMicronovaSession
     ) -> dict[int, int]:
         """Read all current buffer values through an authenticated session."""
         buffer_ids = await session.get_buffer_ids()
@@ -391,7 +392,7 @@ class LocalBleAguaIOT:
         return info
 
     async def _request_writing_session(
-        self, session: "_BleMicronovaSession", payload: dict[str, Any]
+        self, session: _BleMicronovaSession, payload: dict[str, Any]
     ) -> None:
         """Write raw register values through an authenticated session."""
         buffer_ids = await session.get_buffer_ids()
@@ -519,8 +520,10 @@ class LocalBleAguaIOT:
         if scanner_count == 0:
             return (
                 None,
-                "No connectable Bluetooth adapters or ESPHome Bluetooth proxies are "
-                f"available in Home Assistant for '{device.name}'",
+                (
+                    "No connectable Bluetooth adapters or ESPHome Bluetooth proxies are "
+                    f"available in Home Assistant for '{device.name}'"
+                ),
             )
 
         for connectable in (True, False):
@@ -588,9 +591,11 @@ class LocalBleAguaIOT:
 
         return (
             None,
-            f"Micronova BLE device for '{device.name}' was not discovered by Home "
-            f"Assistant yet (address={address}, candidates={candidate_addresses}, "
-            f"expected_names={expected_names})",
+            (
+                f"Micronova BLE device for '{device.name}' was not discovered by Home "
+                f"Assistant yet (address={address}, candidates={candidate_addresses}, "
+                f"expected_names={expected_names})"
+            ),
         )
 
     async def _async_get_ble_device(self, device: Device) -> Any:
@@ -623,7 +628,7 @@ class LocalBleAguaIOT:
 
             await asyncio.sleep(min(BLE_DISCOVERY_RETRY_INTERVAL, remaining))
 
-    def _device_session(self, device: Device) -> "_BleMicronovaSession":
+    def _device_session(self, device: Device) -> _BleMicronovaSession:
         """Create a BLE session wrapper for one device."""
         return _BleMicronovaSession(self, device)
 
@@ -671,7 +676,7 @@ class _BleMicronovaSession:
         assert last_err is not None  # pragma: no cover
         raise last_err
 
-    async def __aenter__(self) -> "_BleMicronovaSession":
+    async def __aenter__(self) -> Self:
         await self._transport._command_lock.acquire()
 
         try:
@@ -730,7 +735,7 @@ class _BleMicronovaSession:
             raise AguaIOTConnectionError(
                 f"Bluetooth connection to '{self._device.name}' failed: {err}"
             ) from err
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             await self._cleanup_failed_enter()
             raise AguaIOTConnectionError(
                 f"Bluetooth connection to '{self._device.name}' failed: {err}"

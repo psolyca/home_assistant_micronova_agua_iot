@@ -14,6 +14,7 @@ _spec.loader.exec_module(_aguaiot_module)
 Device = _aguaiot_module.Device
 aguaiot = _aguaiot_module.aguaiot
 AguaIOTError = _aguaiot_module.AguaIOTError
+AguaIOTUnauthorized = _aguaiot_module.AguaIOTUnauthorized
 
 
 def compute_information_dict(register_map):
@@ -24,7 +25,7 @@ def compute_information_dict(register_map):
     bitwise into the full word value.
     """
     info = {}
-    for reg_key, reg in register_map.items():
+    for reg in register_map.values():
         offset = reg.get("offset")
         value_raw = reg.get("value_raw", "0")
         mask = reg.get("mask", 65535)

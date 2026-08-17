@@ -4,10 +4,11 @@ the IOT Agua platform of Micronova
 
 import asyncio
 import copy
-import jwt
 import logging
 import time
+
 import httpx
+import jwt
 from simpleeval import simple_eval
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ HEADER_CONTENT_TYPE = "application/json"
 HEADER = {"Accept": HEADER_ACCEPT, "Content-Type": HEADER_CONTENT_TYPE}
 
 
-class aguaiot(object):
+class aguaiot:
     def __init__(
         self,
         api_url,
@@ -58,7 +59,7 @@ class aguaiot(object):
         self.token = None
         self.token_expires = None
         self.refresh_token = None
-        self.devices = list()
+        self.devices = []
         self.async_client = async_client
         self.http_timeout = http_timeout
         self.buffer_read_timeout = buffer_read_timeout
@@ -333,7 +334,7 @@ class aguaiot(object):
     async def _fetch_device_registers_mapping(self, device):
         """Fetch registers map for a device."""
         url = self.api_url + API_PATH_DEVICE_REGISTERS_MAP
-        registers = dict()
+        registers = {}
 
         payload = {
             "id_device": device.id_device,
@@ -372,24 +373,21 @@ class aguaiot(object):
             sleep_secs = 1
             attempts = 1
 
-            try:
-                while True:
-                    await asyncio.sleep(sleep_secs)
+            while True:
+                await asyncio.sleep(sleep_secs)
 
-                    _LOGGER.debug("BUFFER READ (%s) ATTEMPT %s", id_request, attempts)
-                    res_get = await self.handle_webcall("GET", url, {})
-                    _LOGGER.debug(
-                        "BUFFER READ (%s) STATUS: %s",
-                        id_request,
-                        res_get.get("jobAnswerStatus"),
-                    )
-                    if res_get.get("jobAnswerStatus") != "waiting":
-                        return res_get
+                _LOGGER.debug("BUFFER READ (%s) ATTEMPT %s", id_request, attempts)
+                res_get = await self.handle_webcall("GET", url, {})
+                _LOGGER.debug(
+                    "BUFFER READ (%s) STATUS: %s",
+                    id_request,
+                    res_get.get("jobAnswerStatus"),
+                )
+                if res_get.get("jobAnswerStatus") != "waiting":
+                    return res_get
 
-                    sleep_secs += 1
-                    attempts += 1
-            except asyncio.CancelledError:
-                raise
+                sleep_secs += 1
+                attempts += 1
 
         try:
             res = await asyncio.wait_for(
@@ -406,7 +404,7 @@ class aguaiot(object):
 
         if res.get("jobAnswerStatus") == "completed":
             current_i = 0
-            information_dict = dict()
+            information_dict = {}
             try:
                 for item in res["jobAnswerData"]["Items"]:
                     information_dict.update(
@@ -477,7 +475,7 @@ class aguaiot(object):
             raise AguaIOTError("Error while request device writing")
 
 
-class Device(object):
+class Device:
     """Agua IOT heating device representation"""
 
     def __init__(
@@ -503,9 +501,9 @@ class Device(object):
         self.name_product = name_product
         self.id_registers_map = id_registers_map
         self.__aguaiot = aguaiot
-        self.__device_info = device_info or dict()
-        self.__register_map_dict = register_map or dict()
-        self.__register_dict = dict()
+        self.__device_info = device_info or {}
+        self.__register_map_dict = register_map or {}
+        self.__register_dict = {}
 
     async def update_mapping(self):
         self.__register_map_dict = await self.__aguaiot._fetch_device_registers_mapping(

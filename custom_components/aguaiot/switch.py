@@ -1,11 +1,13 @@
 import logging
+
+from homeassistant.components.switch import SwitchEntity
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.helpers.entity import DeviceInfo
-from .const import SWITCHES, DOMAIN
+
 from .aguaiot import AguaIOTError
+from .const import DOMAIN, SWITCHES
 
 _LOGGER = logging.getLogger(__name__)
 

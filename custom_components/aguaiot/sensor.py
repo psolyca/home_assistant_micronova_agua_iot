@@ -1,10 +1,12 @@
 import numbers
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
-from homeassistant.helpers.entity import DeviceInfo
-from .const import SENSORS, DOMAIN
+
+from .const import DOMAIN, SENSORS
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -93,12 +95,10 @@ class AguaIOTHeatingSensor(CoordinatorEntity, SensorEntity):
     def options(self):
         if self.entity_description.device_class == SensorDeviceClass.ENUM:
             options = sorted(
-                list(
-                    set(
-                        self._device.get_register_value_options(
-                            self.entity_description.key
-                        ).values()
-                    )
+                set(
+                    self._device.get_register_value_options(
+                        self.entity_description.key
+                    ).values()
                 )
             )
             cur_value = self._device.get_register_value_description(
