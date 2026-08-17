@@ -48,7 +48,7 @@ def compute_information_dict(register_map):
 
 
 def build_device_from_fixture(aguaiot_instance, fixture_name, register_map):
-    info = compute_information_dict(register_map)
+    raw_data = compute_information_dict(register_map)
     device = Device(
         id=1,
         id_device=fixture_name,
@@ -62,5 +62,5 @@ def build_device_from_fixture(aguaiot_instance, fixture_name, register_map):
         device_info={},
         register_map=register_map,
     )
-    device._Device__information_dict = info
+    device._Device__register_dict = device._Device__build_register_dict(raw_data)
     return device
