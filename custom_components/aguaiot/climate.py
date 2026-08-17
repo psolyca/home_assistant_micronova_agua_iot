@@ -1,37 +1,39 @@
 """Support for Agua IOT heating devices."""
 
-import logging
-import re
 import copy
+import logging
 import numbers
+import re
+
+from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate.const import (
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
+)
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    PRECISION_HALVES,
+    UnitOfTemperature,
+)
 from homeassistant.helpers import entity_platform
-from homeassistant.util import dt
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
-from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate.const import (
-    HVACAction,
-    HVACMode,
-    ClimateEntityFeature,
-)
-from homeassistant.const import (
-    ATTR_TEMPERATURE,
-    UnitOfTemperature,
-    PRECISION_HALVES,
-)
+from homeassistant.util import dt
+
+from .aguaiot import AguaIOTError
 from .const import (
-    DOMAIN,
     AIR_VARIANTS,
-    WATER_VARIANTS,
     CLIMATE_CANALIZATIONS,
+    DOMAIN,
     MODE_PELLETS,
     MODE_WOOD,
-    STATUS_OFF,
     STATUS_IDLE,
+    STATUS_OFF,
+    WATER_VARIANTS,
 )
-from .aguaiot import AguaIOTError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -658,11 +660,11 @@ class AguaIOTCanalizationDevice(AguaIOTClimateDevice):
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self.entity_description.key_temp_set in self._device.registers:
-            if self.current_temperature:
-                return self._device.get_register_value(
-                    self.entity_description.key_temp_set
-                )
+        if (
+            self.entity_description.key_temp_set in self._device.registers
+            and self.current_temperature
+        ):
+            return self._device.get_register_value(self.entity_description.key_temp_set)
 
     @property
     def current_temperature(self):

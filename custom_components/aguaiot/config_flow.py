@@ -3,57 +3,56 @@
 import logging
 import uuid
 
+import voluptuous as vol
+from homeassistant.config_entries import (
+    CONN_CLASS_CLOUD_POLL,
+    ConfigEntry,
+    ConfigFlow,
+    OptionsFlowWithReload,
+)
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import section
+from homeassistant.helpers.httpx_client import get_async_client
+
 from .aguaiot import (
     AguaIOTConnectionError,
     AguaIOTError,
     AguaIOTUnauthorized,
     aguaiot,
 )
-from .local_ble import LocalBleAguaIOT
-import voluptuous as vol
-
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    OptionsFlowWithReload,
-    CONN_CLASS_CLOUD_POLL,
-)
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
-from homeassistant.core import callback
-from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.data_entry_flow import section
-
 from .const import (
+    CONF_AIR_TEMP_FIX,
     CONF_API_URL,
     CONF_BLE_BOOTSTRAP_DEVICES,
+    CONF_BRAND,
+    CONF_BRAND_ID,
+    CONF_BUFFER_READ_TIMEOUT,
     CONF_CONNECTION_MODE,
     CONF_CUSTOMER_CODE,
-    CONF_LOGIN_API_URL,
-    CONF_UUID,
     CONF_ENDPOINT,
-    CONF_BRAND_ID,
-    CONF_BRAND,
+    CONF_HTTP_TIMEOUT,
     CONF_LANGUAGE,
-    CONF_AIR_TEMP_FIX,
+    CONF_LOGIN_API_URL,
     CONF_READING_ERROR_FIX,
     CONF_UPDATE_INTERVAL,
-    CONF_HTTP_TIMEOUT,
-    CONF_BUFFER_READ_TIMEOUT,
+    CONF_UUID,
     CONNECTION_MODE_BLUETOOTH,
     CONNECTION_MODE_CLOUD,
     DOMAIN,
     ENDPOINTS,
 )
+from .local_ble import LocalBleAguaIOT
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def conf_entries(hass):
     """Return the email tuples for the domain."""
-    return set(
+    return {
         (entry.data[CONF_EMAIL], entry.data[CONF_API_URL])
         for entry in hass.config_entries.async_entries(DOMAIN)
-    )
+    }
 
 
 class AguaIOTConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -66,9 +65,7 @@ class AguaIOTConfigFlow(ConfigFlow, domain=DOMAIN):
         """Return True if config already exists in configuration."""
         email = user_input[CONF_EMAIL]
         host_server = ENDPOINTS[user_input[CONF_ENDPOINT]][CONF_API_URL]
-        if (email, host_server) in conf_entries(self.hass):
-            return True
-        return False
+        return (email, host_server) in conf_entries(self.hass)
 
     async def async_step_user(self, user_input=None):
         """User initiated integration."""
@@ -194,10 +191,8 @@ class AguaIOTOptionsFlowHandler(OptionsFlowWithReload):
         if agua and getattr(agua, "devices", None):
             try:
                 languages = sorted(
-                    list(
-                        agua.devices[0].get_register_value_options_languages(
-                            "status_managed_get"
-                        )
+                    agua.devices[0].get_register_value_options_languages(
+                        "status_managed_get"
                     )
                 )
             except (KeyError, IndexError, AttributeError):

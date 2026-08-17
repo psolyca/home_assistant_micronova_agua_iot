@@ -4,13 +4,13 @@ from tests.helpers import build_device_from_fixture
 
 
 def sensor_keys(reg_map):
-    return [k for k in reg_map if k.endswith("_get") or k.endswith("_set")]
+    return [k for k in reg_map if k.endswith(("_get", "_set"))]
 
 
 class TestSensorSelection:
     def test_sensor_count_matches_register_count(self, fixture_data):
         for name, reg_map in fixture_data.items():
-            count = sum(1 for k in reg_map if k.endswith("_get") or k.endswith("_set"))
+            count = sum(1 for k in reg_map if k.endswith(("_get", "_set")))
             assert count > 0, f"{name}: expected at least one sensor register"
 
     def test_each_register_produces_native_value(

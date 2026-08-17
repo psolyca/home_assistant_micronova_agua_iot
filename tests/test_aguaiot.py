@@ -1,8 +1,10 @@
 """Test the aguaiot class."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from tests.helpers import aguaiot
+
+import pytest
+
+from tests.helpers import AguaIOTUnauthorized, aguaiot
 
 
 class TestHeaders:
@@ -109,7 +111,7 @@ class TestConnectFlow:
 
         inst.async_client = mock_client
 
-        with pytest.raises(Exception):
+        with pytest.raises(AguaIOTUnauthorized):
             await inst.register_app_id()
 
     @pytest.mark.asyncio
@@ -132,7 +134,7 @@ class TestConnectFlow:
 
         inst.async_client = mock_client
 
-        with pytest.raises(Exception):
+        with pytest.raises(AguaIOTUnauthorized):
             await inst.register_app_id()
 
     @pytest.mark.asyncio
@@ -160,8 +162,9 @@ class TestConnectFlow:
 
     @pytest.mark.asyncio
     async def test_login_success(self):
-        import jwt
         import time
+
+        import jwt
 
         inst = aguaiot(
             api_url="https://example.com",
@@ -220,5 +223,5 @@ class TestConnectFlow:
 
         inst.async_client = mock_client
 
-        with pytest.raises(Exception):
+        with pytest.raises(AguaIOTUnauthorized):
             await inst.login()
