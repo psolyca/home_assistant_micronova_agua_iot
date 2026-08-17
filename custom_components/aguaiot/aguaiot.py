@@ -505,7 +505,7 @@ class Device(object):
         self.__aguaiot = aguaiot
         self.__device_info = device_info or dict()
         self.__register_map_dict = register_map or dict()
-        self.__information_dict = dict()
+        self.__register_dict = dict()
 
     async def update_mapping(self):
         self.__register_map_dict = await self.__aguaiot._fetch_device_registers_mapping(
@@ -513,7 +513,39 @@ class Device(object):
         )
 
     async def update(self):
-        self.__information_dict = await self.__aguaiot._fetch_device_information(self)
+        raw_data = await self.__aguaiot._fetch_device_information(self)
+        self.__register_dict = self.__build_register_dict(raw_data)
+
+    def __build_register_dict(self, raw_data):
+        register_dict = {}
+        for key, register in self.__register_map_dict.items():
+            if "offset" not in register:
+                continue
+            offset = register["offset"]
+            register_dict[key] = dict(register)
+            if offset in raw_data:
+                raw_value = raw_data[offset]
+                register_dict[key]["value_raw"] = str(raw_value & register["mask"])
+                try:
+                    formula = (
+                        register["formula"]
+                        .replace("#", register_dict[key]["value_raw"])
+                        .replace("Mod", "%")
+                    )
+                    register_dict[key]["value"] = simple_eval(
+                        formula,
+                        functions={
+                            "IF": lambda a, b, c: b if a else c,
+                            "int": lambda a: int(a),
+                        },
+                    )
+                except (KeyError, ValueError):
+                    register_dict[key]["value"] = None
+            else:
+                register_dict[key]["value_raw"] = None
+                register_dict[key]["value"] = None
+
+        return register_dict
 
     def __prepare_value_for_writing(self, item, value, limit_value_raw=False):
         set_min = self.__register_map_dict[item]["set_min"]
@@ -578,26 +610,7 @@ class Device(object):
         }
 
     def get_register(self, key):
-        register = self.__register_map_dict.get(key, {})
-
-        try:
-            register["value_raw"] = str(
-                self.__information_dict[register["offset"]] & register["mask"]
-            )
-
-            formula = register["formula"].replace("#", register["value_raw"])
-            formula = formula.replace("Mod", "%")
-            register["value"] = simple_eval(
-                formula,
-                functions={
-                    "IF": lambda a, b, c: b if a else c,
-                    "int": lambda a: int(a),
-                },
-            )
-        except (KeyError, ValueError):
-            pass
-
-        return register
+        return self.__register_dict.get(key, {})
 
     def get_register_value(self, key):
         value = self.get_register(key).get("value")
