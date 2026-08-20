@@ -86,7 +86,7 @@ CONNECTION_MODE_CLOUD = "connection_cloud"
 CONNECTION_MODE_BLUETOOTH = "connection_bluetooth"
 
 AIR_VARIANTS = ["air", "air2", "air3", "air_palm"]
-WATER_VARIANTS = ["water", "h2o", "h2o_mandata"]
+WATER_VARIANTS = ["water", "water_boiler", "h2o", "h2o_mandata"]
 
 MODE_WOOD = "Wood"
 MODE_PELLETS = "Pellet"
