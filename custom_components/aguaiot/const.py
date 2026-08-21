@@ -87,7 +87,7 @@ CONNECTION_MODE_CLOUD = "connection_cloud"
 CONNECTION_MODE_BLUETOOTH = "connection_bluetooth"
 
 AIR_VARIANTS = ["air", "air2", "air3", "air_palm"]
-WATER_VARIANTS = ["water", "water_boiler", "h2o", "h2o_mandata"]
+WATER_VARIANTS = ["water", "water_boiler", "water_puffer", "h2o", "h2o_mandata"]
 
 MODE_WOOD = "Wood"
 MODE_PELLETS = "Pellet"
@@ -457,6 +457,20 @@ SENSORS = (
     ),
     AguaIOTSensorEntityDescription(
         key="temp_water_get",
+        name="Water Temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.TEMPERATURE,
+    ),
+    AguaIOTSensorEntityDescription(
+        key="temp_water_boiler_get",
+        name="Water Temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.TEMPERATURE,
+    ),
+    AguaIOTSensorEntityDescription(
+        key="temp_water_puffer_get",
         name="Water Temperature",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
