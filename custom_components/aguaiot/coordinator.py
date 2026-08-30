@@ -63,6 +63,12 @@ class AguaIOTDataUpdateCoordinator(DataUpdateCoordinator):
             config_entry=config_entry,
         )
 
+        # Tolerate this many consecutive transient connection errors before
+        # marking entities unavailable. Avoids flapping during the short BLE
+        # drops that are common on Micronova/Navel modules (issue #281).
+        self._consecutive_failures: int = 0
+        self._failure_tolerance: int = 3
+
         """Set up AguaIOT entry."""
         api_url = config_entry.data[CONF_API_URL]
         customer_code = config_entry.data[CONF_CUSTOMER_CODE]
@@ -132,12 +138,26 @@ class AguaIOTDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             await self.agua.update()
             await self._async_persist_ble_bootstrap_if_needed()
+            self._consecutive_failures = 0
         except AguaIOTUpdateError as e:
             _LOGGER.error("Agua IOT Update error: %s", e)
         except AguaIOTUnauthorized as e:
             raise UpdateFailed(f"Agua IOT Unauthorized: {e}") from e
         except AguaIOTConnectionError as e:
-            raise UpdateFailed(f"Agua IOT Connection error: {e}") from e
+            self._consecutive_failures += 1
+            if self._consecutive_failures < self._failure_tolerance:
+                _LOGGER.warning(
+                    "Agua IOT transient connection error (%d/%d): %s. "
+                    "Keeping last known state.",
+                    self._consecutive_failures,
+                    self._failure_tolerance,
+                    e,
+                )
+                return
+            raise UpdateFailed(
+                f"Agua IOT Connection error after "
+                f"{self._consecutive_failures} retries: {e}"
+            ) from e
         except AguaIOTError as e:
             raise UpdateFailed(f"Agua IOT error: {e}") from e
 
